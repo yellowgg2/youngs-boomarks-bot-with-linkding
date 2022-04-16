@@ -44,7 +44,13 @@ export default class KoreanBot implements ILanguageBot {
 
   public get showHelp(): string {
     let helpMsg = "/help - 이 도움말 보기\n";
-    helpMsg += "/allusers - 모든 사용자 보기\n";
+    helpMsg += "/allusers - 모든 사용자 보기\n\n";
+    helpMsg += "검색 기능\n";
+    helpMsg += "<u>단어</u>로 검색할 때는 space로 구분하여 보냅니다\n";
+    helpMsg += "예시) 단어1 단어2\n\n";
+    helpMsg += "<u>태그</u>로 검색할 때는 단어 앞에 '#'을 붙이고\n";
+    helpMsg += "space로 구분하여 보냅니다\n";
+    helpMsg += "예시) #단어1 #단어2\n\n";
 
     return helpMsg;
   }

@@ -11,11 +11,7 @@ import DbHandler from "../sqlite/db-handler";
 import fs from "fs";
 import TelegramModel from "../../models/telegram-model";
 import { LF } from "../../language/language-factory";
-
-enum CheckReplyForDelete {
-  StopProcessing = 1,
-  KeepProcessing
-}
+import url from "url";
 
 export default class BotService {
   private static instance: BotService;
@@ -35,7 +31,19 @@ export default class BotService {
   start() {
     botInstance.on("message", this._messageHandler);
     botInstance.on("polling_error", err => console.log(err));
-    botInstance.on("callback_query", async msg => {});
+    botInstance.on("callback_query", async msg => {
+      let chatId = msg.message?.chat.id;
+      let username = msg.from.username;
+      let query = msg.data;
+      let queryObj = JSON.parse(query!);
+      this.sendLinks(
+        chatId!,
+        username!,
+        queryObj.q,
+        parseInt(queryObj.limit),
+        parseInt(queryObj.offset)
+      );
+    });
   }
 
   showHelp(chatId: number) {
@@ -50,8 +58,11 @@ export default class BotService {
     chatId: number,
     msg: string,
     options: SendMessageOptions = { parse_mode: "HTML" }
-  ): void {
-    botInstance.sendMessage(chatId, msg, options).catch(e => glog.error(e));
+  ): Promise<TelegramBot.Message | null> {
+    return botInstance.sendMessage(chatId, msg, options).catch(e => {
+      glog.error(e);
+      return null;
+    });
   }
 
   sendMsgToAdmin(msg: string): void {
@@ -170,43 +181,75 @@ export default class BotService {
       .catch(e => glog.error(e));
   }
 
-  //   private sendFileTypeButtons(
-  //     chatId: number,
-  //     msg: string,
-  //     setType: boolean = false
-  //   ) {
-  //     let ik = new InlineKeyboard();
-  //     let firstRow = new Row<InlineKeyboardButton>();
-  //     let secondRow = new Row<InlineKeyboardButton>();
+  private sendNextButton(chatId: number, totalCount: number, query: any) {
+    let ik = new InlineKeyboard();
+    let firstRow = new Row<InlineKeyboardButton>();
 
-  //     let _firstRowFormatButtons = [
-  //       new InlineKeyboardButton("mp3", "callback_data", "mp3"),
-  //       new InlineKeyboardButton("mp4", "callback_data", "mp4"),
-  //       new InlineKeyboardButton("m4a", "callback_data", "m4a")
-  //     ];
+    let _firstRowFormatButtons = [
+      new InlineKeyboardButton("다음", "callback_data", JSON.stringify(query))
+    ];
 
-  //     let _secondRowFormatButtons = [
-  //       new InlineKeyboardButton("flac", "callback_data", "flac"),
-  //       new InlineKeyboardButton("ogg", "callback_data", "ogg"),
-  //       new InlineKeyboardButton("wav", "callback_data", "wav"),
-  //       new InlineKeyboardButton("webm", "callback_data", "webm")
-  //     ];
+    firstRow.push(..._firstRowFormatButtons);
 
-  //     firstRow.push(..._firstRowFormatButtons);
-  //     secondRow.push(..._secondRowFormatButtons);
+    ik.push(firstRow);
+    this.sendMsg(
+      chatId,
+      `😏 다음 결과를 가져오려면 다음 버튼을 눌러주세요\n💬남은 갯수: [ ${
+        totalCount - query.offset
+      } ] 항목`,
+      {
+        reply_markup: ik.getMarkup()
+      }
+    );
+  }
 
-  //     ik.push(firstRow);
-  //     ik.push(secondRow);
-  //     if (setType === true) {
-  //       // 파일 타입 삭제 버튼
-  //       let thirdRow = new Row<InlineKeyboardButton>();
-  //       thirdRow.push(new InlineKeyboardButton("none", "callback_data", "none"));
-  //       ik.push(thirdRow);
-  //     }
-  //     this.sendMsg(chatId, msg, {
-  //       reply_markup: ik.getMarkup()
-  //     });
-  //   }
+  async sendLinks(
+    chatId: number,
+    username: string,
+    searchText: string,
+    limit: number = 5,
+    offset: number = 0
+  ) {
+    // 북마크 찾기 : #태그1 #태그2 #태그3 or 단어1 단어2 단어3
+    //   let words = msg.text?.replace(/\s/g, "").split(",");
+    //   console.log(words);
+    let userToken = await DbHandler.getLinkdingTokenForUser(username!);
+    if (userToken?.[0]?.token) {
+      let bookmarks = await ApiCaller.getInstance().searchBookmark(
+        userToken[0].token,
+        searchText,
+        limit,
+        offset
+      );
+
+      let messagesPromise = [];
+      for (let bookmark of bookmarks.results) {
+        let sendBackMessage = "";
+        let title =
+          bookmark.title !== ""
+            ? bookmark.title.replace(/\|/g, "\\|")
+            : bookmark.website_title.replace(/\|/g, "\\|");
+        let tags =
+          bookmark.tag_names.length > 0
+            ? (bookmark.tag_names as []).map(v => `#${v}`).join(" ")
+            : "없음";
+        sendBackMessage += `🎫 ID: ${bookmark.id}\n`;
+        sendBackMessage += `🛒 Title: ${title}\n`;
+        sendBackMessage += `🍒 Tags: <code>${tags}</code>\n\n`;
+
+        sendBackMessage += `${bookmark.url}`;
+        messagesPromise.push(this.sendMsg(chatId, sendBackMessage));
+      }
+      Promise.all(messagesPromise).then(() => {
+        if (bookmarks.next) {
+          let q = url.parse(bookmarks.next, true);
+          this.sendNextButton(chatId, bookmarks.count, q.query);
+        }
+      });
+    } else {
+      this.sendMsg(chatId, "토큰이 없어요!");
+    }
+  }
 
   private _messageHandler = (msg: TelegramBot.Message): void => {
     const chatId = msg.chat.id;
@@ -257,19 +300,9 @@ export default class BotService {
         if (valid === true) {
           // 북마크 생성 : URL 형식
         } else {
-          // 북마크 찾기 : #태그1 #태그2 #태그3 or 단어1 단어2 단어3
-          //   let words = msg.text?.replace(/\s/g, "").split(",");
-          //   console.log(words);
-          let userToken = await DbHandler.getLinkdingTokenForUser(username!);
-          if (userToken?.[0]?.token) {
-            let results = await ApiCaller.getInstance().searchBookmark(
-              userToken[0].token,
-              msg.text ?? "unknown"
-            );
-            console.log("=======================", results);
-          } else {
-            this.sendMsg(chatId, "토큰이 없어요!");
-          }
+          this.sendLinks(chatId, username!, msg.text ?? "unknown").catch(e =>
+            glog.error(`[Line - 290][File - bot-service.ts] %o`, e)
+          );
         }
       });
     }

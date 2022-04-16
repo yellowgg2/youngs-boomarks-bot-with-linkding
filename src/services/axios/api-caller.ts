@@ -40,7 +40,7 @@ export default class ApiCaller {
     token: string,
     searchQuery: string,
     limit: number = 5,
-    offset = 0
+    offset: number = 0
   ) {
     let res = await axios.get(`${this._baseUrl}/api/bookmarks/`, {
       headers: {
