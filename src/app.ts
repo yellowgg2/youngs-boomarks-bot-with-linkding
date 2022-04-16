@@ -1,3 +1,4 @@
+import ApiCaller from "./services/axios/api-caller";
 import { glog } from "./services/logger/custom-logger";
 import DbHandler from "./services/sqlite/db-handler";
 import DbService from "./services/sqlite/db-service";
@@ -17,5 +18,14 @@ class Starter {
       process.exit(0);
     });
   };
+
+  startDevServer = async () => {
+    await ApiCaller.getInstance().searchBookmark(
+      process.env.LINKDING_ADMIN_TOKEN as string,
+      "#utils"
+    );
+  };
 }
+
 new Starter().startServer();
+// new Starter().startDevServer();

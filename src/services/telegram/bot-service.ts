@@ -78,6 +78,7 @@ export default class BotService {
     chatId: number,
     id: string | undefined,
     name: string | undefined,
+    token: string = "",
     type: string = "user"
   ) {
     if (!id || !name) {
@@ -85,7 +86,7 @@ export default class BotService {
       return;
     }
     this.sendMsgToAdmin(LF.str.newlyAddUserAdminCmd(id, name));
-    DbHandler.insertNewUser(id, name, type)
+    DbHandler.insertNewUser(id, name, token, type)
       .then(() => this.sendMsg(chatId, LF.str.successfullyAdded))
       .catch(e => glog.error(e));
   }
@@ -94,6 +95,7 @@ export default class BotService {
     chatId: number,
     id: string | undefined,
     name: string | undefined,
+    token: string = "",
     type: string = "user"
   ) {
     if (!id || !name) {
@@ -101,7 +103,7 @@ export default class BotService {
       return;
     }
     this.sendMsgToAdmin(LF.str.updateUserAdminCmd(id, name));
-    DbHandler.updateUser(id, name, type)
+    DbHandler.updateUser(id, name, token, type)
       .then(() => this.sendMsg(chatId, LF.str.successfullyUpdated))
       .catch(e => glog.error(e));
   }
@@ -231,12 +233,12 @@ export default class BotService {
           break;
         case /\/adduser/.test(cmd[0]):
           this.adminCommand(chatId, username, () => {
-            this.addUser(chatId, cmd[1], cmd[2], cmd[3]);
+            this.addUser(chatId, cmd[1], cmd[2], cmd[3], cmd[4]);
           });
           break;
         case /\/upuser/.test(cmd[0]):
           this.adminCommand(chatId, username, () => {
-            this.upUser(chatId, cmd[1], cmd[2], cmd[3]);
+            this.upUser(chatId, cmd[1], cmd[2], cmd[3], cmd[4]);
           });
           break;
         case /\/deluser/.test(cmd[0]):
@@ -250,7 +252,26 @@ export default class BotService {
       }
       return;
     } else {
-      this.authUserCommand(chatId, username, () => {});
+      this.authUserCommand(chatId, username, async () => {
+        let valid = /^(http|https):\/\/[^ "]+$/.test(msg.text!);
+        if (valid === true) {
+          // 북마크 생성 : URL 형식
+        } else {
+          // 북마크 찾기 : #태그1 #태그2 #태그3 or 단어1 단어2 단어3
+          //   let words = msg.text?.replace(/\s/g, "").split(",");
+          //   console.log(words);
+          let userToken = await DbHandler.getLinkdingTokenForUser(username!);
+          if (userToken?.[0]?.token) {
+            let results = await ApiCaller.getInstance().searchBookmark(
+              userToken[0].token,
+              msg.text ?? "unknown"
+            );
+            console.log("=======================", results);
+          } else {
+            this.sendMsg(chatId, "토큰이 없어요!");
+          }
+        }
+      });
     }
   };
 }

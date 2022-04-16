@@ -1,9 +1,9 @@
 import { ILanguageBot } from "./language-factory";
 
 export default class EnglishBot implements ILanguageBot {
-  howToAddUser = "🌈 HowTo : /adduser [id] [desc] [admin/user]";
+  howToAddUser = "🌈 HowTo : /adduser [id] [desc] [token] [admin/user]";
   successfullyAdded = "🌈 Successfully [[ Added ]]";
-  howToUpUser = "🌈 HowTo : /upuser [id] [desc] [admin/user]";
+  howToUpUser = "🌈 HowTo : /upuser [id] [desc] [token] [admin/user]";
   successfullyUpdated = "🌈 Successfully [[ Updated ]]";
   howToDelUser = "🌈 HowTo : /deluser [id]";
   successfullyDeleted = "🌈 Successfully [[ Deleted ]]";

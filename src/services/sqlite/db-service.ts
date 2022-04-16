@@ -23,6 +23,7 @@ export default class DbService {
     CREATE TABLE IF NOT EXISTS bookmark_users (
       username TEXT PRIMARY KEY,
       first_name TEXT,
+      type TEXT,
       token TEXT
       )
   `;

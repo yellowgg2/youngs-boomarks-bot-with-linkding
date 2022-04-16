@@ -1,11 +1,9 @@
-import axios, { AxiosInstance } from "axios";
-import fs from "fs";
-import dotenv from "dotenv";
+import axios from "axios";
 import { glog } from "../logger/custom-logger";
 import BotService from "../telegram/bot-service";
 import AxiosModel from "../../models/axios-model";
 import { LF } from "../../language/language-factory";
-dotenv.config();
+require("dotenv").config();
 
 export interface IPlayList {
   title: string;
@@ -18,21 +16,10 @@ export interface IPlayListItem {
 }
 
 export default class ApiCaller {
-  private _axiosCaller: AxiosInstance;
   private static instance: ApiCaller;
-  private _baseUrl =
-    process.env.NODE_ENV === "production"
-      ? process.env.LINKDING_URL
-      : "http://192.168.4.73:9090";
+  private _baseUrl = process.env.LINKDING_URL;
 
-  private constructor() {
-    let token = `Token ${process.env.LINKDING_ADMIN_TOKEN}`;
-
-    this._axiosCaller = axios.create({
-      headers: { Authorization: token },
-      baseURL: this._baseUrl
-    });
-  }
+  private constructor() {}
 
   static getInstance() {
     if (!ApiCaller.instance) {
@@ -44,19 +31,53 @@ export default class ApiCaller {
 
   /**
    *
+   * @param token Linkding token
    * @param searchQuery q param (ex: title, or #title for tag)
    * @param limit limit
    * @param offset offset
    */
   async searchBookmark(
+    token: string,
     searchQuery: string,
-    limit: number = 100,
-    offset: number = 100
+    limit: number = 5,
+    offset = 0
   ) {
-    let res = await this._axiosCaller.get("/", {
+    let res = await axios.get(`${this._baseUrl}/api/bookmarks/`, {
+      headers: {
+        Authorization: `Token ${token}`
+      },
       params: { q: searchQuery, limit, offset }
     });
 
-    console.log(res);
+    if (res.status !== 200) {
+      glog.error(`[Line - 56][File - api-caller.ts] ${res.statusText}`);
+      throw res.statusText;
+    }
+    return res.data;
+  }
+
+  async createBookmark(
+    token: string,
+    url: string,
+    title: string,
+    desc: string,
+    tags: Array<string>
+  ) {
+    let payload = {
+      url,
+      title,
+      description: desc,
+      tag_names: tags
+    };
+    let res = await axios.post(`${this._baseUrl}/api/bookmarks/`, payload, {
+      headers: {
+        Authorization: `Token ${token}`
+      }
+    });
+
+    if (res.status !== 200) {
+      glog.error(`[Line - 56][File - api-caller.ts] ${res.statusText}`);
+      throw res.statusText;
+    }
   }
 }
