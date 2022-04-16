@@ -10,3 +10,5 @@ services:
         PGID: $PGID
         UNAME: bookmarksuser
     restart: always
+    volumes:
+      - ./db:/bookmarkbot/db

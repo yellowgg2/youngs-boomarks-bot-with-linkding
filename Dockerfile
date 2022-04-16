@@ -8,9 +8,6 @@ RUN echo $TZ > /etc/timezone && \
     dpkg-reconfigure -f noninteractive tzdata && \ 
     apt-get clean
 
-RUN mkdir -p /bookmarkbot/download
-RUN mkdir -p /bookmarkbot/db
-
 ARG UNAME
 ARG PUID
 ARG PGID
