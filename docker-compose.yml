@@ -4,7 +4,7 @@ services:
     container_name: bookmarks-bot
     image: bookmarksbot
     build:
-      context: ./bot
+      context: .
       args:
         PUID: $PUID
         PGID: $PGID
