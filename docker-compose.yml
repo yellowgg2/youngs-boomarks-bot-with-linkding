@@ -1,0 +1,12 @@
+version: "3.1"
+services:
+  bookmarks-bot:
+    container_name: bookmarks-bot
+    image: bookmarksbot
+    build:
+      context: ./bot
+      args:
+        PUID: $PUID
+        PGID: $PGID
+        UNAME: bookmarksuser
+    restart: always

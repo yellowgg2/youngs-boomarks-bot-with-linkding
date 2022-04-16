@@ -1,13 +1,23 @@
-```
-<b>bold</b>, <strong>bold</strong>
-<i>italic</i>, <em>italic</em>
-<u>underline</u>, <ins>underline</ins>
-<s>strikethrough</s>, <strike>strikethrough</strike>, <del>strikethrough</del>
-<span class="tg-spoiler">spoiler</span>, <tg-spoiler>spoiler</tg-spoiler>
-<b>bold <i>italic bold <s>italic bold strikethrough <span class="tg-spoiler">italic bold strikethrough spoiler</span></s> <u>underline italic bold</u></i> bold</b>
-<a href="http://www.example.com/">inline URL</a>
-<a href="tg://user?id=123456789">inline mention of a user</a>
-<code>inline fixed-width code</code>
-<pre>pre-formatted fixed-width code block</pre>
-<pre><code class="language-python">pre-formatted fixed-width code block written in the Python programming language</code></pre>
-```
+# Young's bookmarks bot with Linkding
+
+그 동안 북마크 툴로 [Linkding](https://github.com/sissbruecker/linkding)을 많이 애용해왔다.
+
+써오면서 불편한 점은 브라우져를 열어서, 로그인을 하고 북마크를 검색하는 일이 귀찮아졌다.
+
+특히 스마트 폰에서 더욱 귀찮았다. 그래서 만들었다. 북마크 봇!!!!
+
+## 사용법
+
+- 북마크 추가
+  - URL을 보내면 봇이 태그를 추가하라고 응답을 보낸다  
+    -그럼 space로 구분하여 단어를 보내면 태그들과 함께 해당 URL을 Linkding에 등록해준다
+- 북마크 검색
+  - 아무 단어나 봇에게 보내면, 해당 단어가 포함된 북마크를 검색해줌 (여러 단어를 검색할 때는 space로 구분)
+    - `예시) 한국 텔레그램`
+  - `#`으로 시작하는 태그를 봇에게 보내면, 해당 태그가 포함된 북마크를 검색해줌 (여러 태그를 검색할 때는 space로 구분)
+    - `예시) #한국 #텔레그램`
+
+## TODO
+
+- DELETE 기능
+- EDIT 기능

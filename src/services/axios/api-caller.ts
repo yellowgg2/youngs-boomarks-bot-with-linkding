@@ -56,17 +56,9 @@ export default class ApiCaller {
     return res.data;
   }
 
-  async createBookmark(
-    token: string,
-    url: string,
-    title: string,
-    desc: string,
-    tags: Array<string>
-  ) {
+  async createBookmark(token: string, url: string, tags: Array<string>) {
     let payload = {
       url,
-      title,
-      description: desc,
       tag_names: tags
     };
     let res = await axios.post(`${this._baseUrl}/api/bookmarks/`, payload, {
@@ -75,8 +67,8 @@ export default class ApiCaller {
       }
     });
 
-    if (res.status !== 200) {
-      glog.error(`[Line - 56][File - api-caller.ts] ${res.statusText}`);
+    if (res.status >= 400) {
+      glog.error(`[Line - 74][File - api-caller.ts] ${res.statusText}`);
       throw res.statusText;
     }
   }

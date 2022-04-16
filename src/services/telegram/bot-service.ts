@@ -8,15 +8,21 @@ import { ADMIN_CHATID, botInstance } from "../../global-bot-config";
 import ApiCaller from "../axios/api-caller";
 import { glog } from "../logger/custom-logger";
 import DbHandler from "../sqlite/db-handler";
-import fs from "fs";
 import TelegramModel from "../../models/telegram-model";
 import { LF } from "../../language/language-factory";
 import url from "url";
 
+enum TypeMode {
+  Normal = 1,
+  TagInput,
+  Editing
+}
 export default class BotService {
   private static instance: BotService;
 
   private _tm = new TelegramModel();
+  private _typeMode: TypeMode = TypeMode.Normal;
+  private _inputUrl: string | null = null;
 
   private constructor() {}
 
@@ -296,13 +302,48 @@ export default class BotService {
       return;
     } else {
       this.authUserCommand(chatId, username, async () => {
-        let valid = /^(http|https):\/\/[^ "]+$/.test(msg.text!);
-        if (valid === true) {
+        if (this._typeMode === TypeMode.Normal) {
+          let valid = /^(http|https):\/\/[^ "]+$/.test(msg.text!);
+          if (valid === true) {
+            this.sendMsg(
+              chatId,
+              "💌 태그를 space로 구분하여 입력해주세요\n\n-- 예시 --\n한국 텔레그램 멋짐"
+            );
+            this._inputUrl = msg.text!;
+            this._typeMode = TypeMode.TagInput;
+          } else {
+            this.sendLinks(chatId, username!, msg.text ?? "unknown").catch(e =>
+              glog.error(`[Line - 290][File - bot-service.ts] %o`, e)
+            );
+          }
+        } else if (this._typeMode === TypeMode.TagInput) {
           // 북마크 생성 : URL 형식
-        } else {
-          this.sendLinks(chatId, username!, msg.text ?? "unknown").catch(e =>
-            glog.error(`[Line - 290][File - bot-service.ts] %o`, e)
-          );
+          //   {
+          //     "url": "https://github.com/yellowgg2/youngs-ytdl",
+          //     "tag_names": [
+          //       "tag1",
+          //       "tag2",
+          //       "github"
+          //     ]
+          //   }
+          let userToken = await DbHandler.getLinkdingTokenForUser(username!);
+          if (userToken?.[0]?.token) {
+            try {
+              let tags = msg.text?.split(" ") ?? [];
+              await ApiCaller.getInstance().createBookmark(
+                userToken[0].token,
+                this._inputUrl!,
+                tags
+              );
+              this.sendMsg(chatId, LF.str.successfullyAdded);
+            } catch (error) {
+              this.sendMsg(chatId, `${error}`);
+              glog.error(`[Line - 340][File - bot-service.ts] ${error}`);
+            }
+          } else {
+            this.sendMsg(chatId, "😒 토큰이 없어요!");
+          }
+          this._typeMode = TypeMode.Normal;
         }
       });
     }
