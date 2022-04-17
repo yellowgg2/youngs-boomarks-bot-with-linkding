@@ -194,7 +194,7 @@ export default class BotService {
     ik.push(firstRow);
     this.sendMsg(
       chatId,
-      `😏 다음 결과를 가져오려면 다음 버튼을 눌러주세요\n💬남은 갯수: [ ${
+      `😏 다음 결과를 가져오려면 다음 버튼을 눌러주세요\n💬남은 개수: [ ${
         totalCount - query.offset
       } ] 항목`,
       {
