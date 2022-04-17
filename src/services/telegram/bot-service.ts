@@ -8,20 +8,14 @@ import { ADMIN_CHATID, botInstance } from "../../global-bot-config";
 import ApiCaller from "../axios/api-caller";
 import { glog } from "../logger/custom-logger";
 import DbHandler from "../sqlite/db-handler";
-import TelegramModel from "../../models/telegram-model";
+import TelegramModel, { TypeMode } from "../../models/telegram-model";
 import { LF } from "../../language/language-factory";
 import url from "url";
 
-enum TypeMode {
-  Normal = 1,
-  TagInput,
-  Editing
-}
 export default class BotService {
   private static instance: BotService;
 
   private _tm = new TelegramModel();
-  private _typeMode: TypeMode = TypeMode.Normal;
   private _inputUrl: string | null = null;
 
   private constructor() {}
@@ -222,13 +216,20 @@ export default class BotService {
     let userToken = await DbHandler.getLinkdingTokenForUser(username!);
     if (userToken?.[0]?.token) {
       let bookmarks = await ApiCaller.getInstance().searchBookmark(
-        userToken[0].token,
+        process.env.NODE_ENV !== "production"
+          ? process.env.LINKDING_ADMIN_TOKEN
+          : userToken[0].token,
         searchText,
         limit,
         offset
       );
 
       let messagesPromise = [];
+      if (bookmarks.results.length === 0) {
+        this.sendMsg(chatId, "😜 검색 결과가 없습니다.");
+        return;
+      }
+
       for (let bookmark of bookmarks.results) {
         let sendBackMessage = "";
         let title =
@@ -253,7 +254,7 @@ export default class BotService {
         }
       });
     } else {
-      this.sendMsg(chatId, "토큰이 없어요!");
+      this.sendMsg(chatId, "😒 토큰이 없어요!");
     }
   }
 
@@ -302,7 +303,7 @@ export default class BotService {
       return;
     } else {
       this.authUserCommand(chatId, username, async () => {
-        if (this._typeMode === TypeMode.Normal) {
+        if (this._tm.getMode(username!) === TypeMode.Normal) {
           let valid = /^(http|https):\/\/[^ "]+$/.test(msg.text!);
           if (valid === true) {
             this.sendMsg(
@@ -310,13 +311,13 @@ export default class BotService {
               "💌 태그를 space로 구분하여 입력해주세요\n\n-- 예시 --\n한국 텔레그램 멋짐"
             );
             this._inputUrl = msg.text!;
-            this._typeMode = TypeMode.TagInput;
+            this._tm.setMode(username!, TypeMode.TagInput);
           } else {
             this.sendLinks(chatId, username!, msg.text ?? "unknown").catch(e =>
-              glog.error(`[Line - 290][File - bot-service.ts] %o`, e)
+              glog.error(`[Line - 290][File - bot-service.ts] ${e}`)
             );
           }
-        } else if (this._typeMode === TypeMode.TagInput) {
+        } else if (this._tm.getMode(username!) === TypeMode.TagInput) {
           // 북마크 생성 : URL 형식
           //   {
           //     "url": "https://github.com/yellowgg2/youngs-ytdl",
@@ -331,7 +332,9 @@ export default class BotService {
             try {
               let tags = msg.text?.split(" ") ?? [];
               await ApiCaller.getInstance().createBookmark(
-                userToken[0].token,
+                process.env.NODE_ENV !== "production"
+                  ? process.env.LINKDING_ADMIN_TOKEN
+                  : userToken[0].token,
                 this._inputUrl!,
                 tags
               );
@@ -343,7 +346,7 @@ export default class BotService {
           } else {
             this.sendMsg(chatId, "😒 토큰이 없어요!");
           }
-          this._typeMode = TypeMode.Normal;
+          this._tm.setMode(username!, TypeMode.Normal);
         }
       });
     }
