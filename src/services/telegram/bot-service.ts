@@ -56,6 +56,7 @@ export default class BotService {
             parseInt(queryObj.offset)
           );
         } else if (queryObj?.bmId && queryObj?.t) {
+          this.clearOutButtons(msg);
           this.setEditingMode(username!, queryObj.t);
           this.sendEditingMessage(chatId!, username!, queryObj.t);
         }
@@ -117,6 +118,16 @@ export default class BotService {
         glog.error(`[Line - 93][File - bot-service.ts] ${error}`);
       }
     }
+  }
+
+  clearOutButtons(msg: TelegramBot.CallbackQuery) {
+    botInstance.editMessageReplyMarkup(
+      { inline_keyboard: [] },
+      {
+        chat_id: msg.from?.id,
+        message_id: msg.message?.message_id
+      }
+    );
   }
 
   setEditingMode(username: string, type: string) {
