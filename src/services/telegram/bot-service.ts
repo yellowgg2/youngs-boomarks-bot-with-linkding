@@ -8,9 +8,17 @@ import { ADMIN_CHATID, botInstance } from "../../global-bot-config";
 import ApiCaller from "../axios/api-caller";
 import { glog } from "../logger/custom-logger";
 import DbHandler from "../sqlite/db-handler";
-import TelegramModel, { TypeMode } from "../../models/telegram-model";
+import TelegramModel, {
+  IBookmarkInfo,
+  TypeMode
+} from "../../models/telegram-model";
 import { LF } from "../../language/language-factory";
 import url from "url";
+
+enum CheckReplyForEdit {
+  StopProcessing = 1,
+  KeepProcessing
+}
 
 export default class BotService {
   private static instance: BotService;
@@ -35,14 +43,25 @@ export default class BotService {
       let chatId = msg.message?.chat.id;
       let username = msg.from.username;
       let query = msg.data;
-      let queryObj = JSON.parse(query!);
-      this.sendLinks(
-        chatId!,
-        username!,
-        queryObj.q,
-        parseInt(queryObj.limit),
-        parseInt(queryObj.offset)
-      );
+
+      try {
+        let queryObj = JSON.parse(query!);
+        if (queryObj?.limit && queryObj?.offset) {
+          // 찾기 다음 버튼
+          this.sendLinks(
+            chatId!,
+            username!,
+            queryObj.q,
+            parseInt(queryObj.limit),
+            parseInt(queryObj.offset)
+          );
+        } else if (queryObj?.bmId && queryObj?.t) {
+          this.setEditingMode(username!, queryObj.t);
+          this.sendEditingMessage(chatId!, username!, queryObj.t);
+        }
+      } catch (error) {
+        glog.error(`[Line - 55][File - bot-service.ts] ${error}`);
+      }
     });
   }
 
@@ -52,6 +71,65 @@ export default class BotService {
 
   showAdminHelp(chatId: number) {
     this.sendMsg(chatId, LF.str.showAdminHelp);
+  }
+
+  async sendEditingMessage(chatId: number, username: string, type: string) {
+    let bookmark = this._tm.getBookmarkForUser(username!);
+    if (type === "title") {
+      this.sendMsg(
+        chatId,
+        `📘 타이틀을 입력해주세요\n현재타이틀: <code>${bookmark.title}</code>`
+      );
+    } else if (type === "tag") {
+      this.sendMsg(
+        chatId,
+        `💌 태그를 space로 구분하여 입력해주세요\n\n-- 예시 --\n한국 텔레그램 멋짐\n\n현재태그: <code>${bookmark.tags?.join(
+          " "
+        )}</code>`
+      );
+    } else if (type === "desc") {
+      this.sendMsg(
+        chatId,
+        `🌐 설명을 입력해주세요\n현재설명: <code>${bookmark.desc}</code>`
+      );
+    } else if (type === "end") {
+      try {
+        let userToken = await DbHandler.getLinkdingTokenForUser(username!);
+        if (userToken?.[0]?.token) {
+          let bookmark = this._tm.getBookmarkForUser(username!);
+          ApiCaller.getInstance()
+            .updateBookmark(
+              process.env.NODE_ENV !== "production"
+                ? process.env.LINKDING_ADMIN_TOKEN
+                : userToken[0].token,
+              bookmark
+            )
+            .then(() => {
+              this._tm.setMode(username, TypeMode.Normal);
+              this._tm.deleteBookmarkForUser(username);
+              this.sendMsg(chatId, LF.str.successfullyUpdated);
+            })
+            .catch(e => {
+              this.sendMsg(chatId, `😱 ${e}`);
+            });
+        }
+      } catch (error) {
+        glog.error(`[Line - 93][File - bot-service.ts] ${error}`);
+      }
+    }
+  }
+
+  setEditingMode(username: string, type: string) {
+    if (type === "title") {
+      glog.info(`[Line - 104][File - bot-service.ts] Enter title editing mode`);
+      this._tm.setMode(username, TypeMode.TitleEditing);
+    } else if (type === "tag") {
+      glog.info(`[Line - 108][File - bot-service.ts] Enter tag editing mode`);
+      this._tm.setMode(username, TypeMode.TagEditing);
+    } else if (type === "desc") {
+      glog.info(`[Line - 110][File - bot-service.ts] Enter desc editing mode`);
+      this._tm.setMode(username, TypeMode.DescEditing);
+    }
   }
 
   sendMsg(
@@ -203,6 +281,52 @@ export default class BotService {
     );
   }
 
+  private sendEditButton(chatId: number, bookmark: IBookmarkInfo) {
+    let ik = new InlineKeyboard();
+    let firstRow = new Row<InlineKeyboardButton>();
+    let secondRow = new Row<InlineKeyboardButton>();
+
+    let _firstRowFormatButtons = [
+      new InlineKeyboardButton(
+        "타이틀",
+        "callback_data",
+        JSON.stringify({ bmId: bookmark.bookmarkId, t: "title" })
+      ),
+      new InlineKeyboardButton(
+        "설명",
+        "callback_data",
+        JSON.stringify({ bmId: bookmark.bookmarkId, t: "desc" })
+      ),
+      new InlineKeyboardButton(
+        "태그",
+        "callback_data",
+        JSON.stringify({ bmId: bookmark.bookmarkId, t: "tag" })
+      )
+    ];
+
+    let _secondRowFormatButtons = [
+      new InlineKeyboardButton(
+        "저장 및 종료",
+        "callback_data",
+        JSON.stringify({ bmId: bookmark.bookmarkId, t: "end" })
+      )
+    ];
+
+    firstRow.push(..._firstRowFormatButtons);
+    secondRow.push(..._secondRowFormatButtons);
+
+    ik.push(firstRow);
+    ik.push(secondRow);
+
+    let bodyMessage = `😏 수정을 원하는 항목을 선택해주세요\n\n`;
+    bodyMessage += `현재정보\ntitle: ${bookmark.title}\n`;
+    bodyMessage += `desc: ${bookmark.desc ?? "Not Assigned"}\n`;
+    bodyMessage += `tags: ${bookmark.tags?.join(" ") ?? "Not Assigned"}`;
+    this.sendMsg(chatId, bodyMessage, {
+      reply_markup: ik.getMarkup()
+    });
+  }
+
   async sendLinks(
     chatId: number,
     username: string,
@@ -232,17 +356,19 @@ export default class BotService {
 
       for (let bookmark of bookmarks.results) {
         let sendBackMessage = "";
-        let title =
-          bookmark.title !== ""
-            ? bookmark.title.replace(/\|/g, "\\|")
-            : bookmark.website_title.replace(/\|/g, "\\|");
+        let title = bookmark.title || bookmark.website_title || "Not Assigned";
+        let desc =
+          bookmark.description ||
+          bookmark.website_description ||
+          "Not Assigned";
         let tags =
           bookmark.tag_names.length > 0
             ? (bookmark.tag_names as []).map(v => `#${v}`).join(" ")
             : "없음";
         sendBackMessage += `🎫 ID: ${bookmark.id}\n`;
         sendBackMessage += `🛒 Title: ${title}\n`;
-        sendBackMessage += `🍒 Tags: <code>${tags}</code>\n\n`;
+        sendBackMessage += `🔰 Desc: ${desc}\n`;
+        sendBackMessage += `🍒 Tags: <code>${tags}</code>\n`;
 
         sendBackMessage += `${bookmark.url}`;
         messagesPromise.push(this.sendMsg(chatId, sendBackMessage));
@@ -256,6 +382,147 @@ export default class BotService {
     } else {
       this.sendMsg(chatId, "😒 토큰이 없어요!");
     }
+  }
+
+  private isEditWords(text: string): boolean {
+    return text === "수정" || text === "e" || text === "edit";
+  }
+
+  private isDeleteWords(text: string): boolean {
+    return text === "삭제" || text === "d" || text === "delete";
+  }
+
+  private isEditingMode(mode: TypeMode): boolean {
+    return (
+      mode === TypeMode.TitleEditing ||
+      mode === TypeMode.DescEditing ||
+      mode === TypeMode.TagEditing
+    );
+  }
+
+  checkReplyAndParseCommand(msg: TelegramBot.Message) {
+    const chatId = msg.chat.id;
+    const username = msg.from?.username;
+
+    let bookmarkInfo = msg.reply_to_message?.text?.split("\n");
+    let bookmarkId = bookmarkInfo?.[0] ?? null;
+    let title = bookmarkInfo?.[1] ?? undefined;
+    let desc = bookmarkInfo?.[2] ?? undefined;
+    let tagStr = bookmarkInfo?.[3] ?? undefined;
+    let url = bookmarkInfo?.[4] ?? undefined;
+    let tags = Array<string>();
+    if (tagStr) {
+      tagStr = tagStr.replace(/#/g, "");
+      tagStr = tagStr.split(": ")[1];
+      tags = tagStr.split(" ");
+    }
+
+    if (bookmarkId !== null && this.isEditWords(msg.text ?? "")) {
+      let uniqueId = bookmarkId.split(": ")[1];
+      title = title ? title.split(": ")[1] : "Not Assigned";
+      desc = desc ? desc.split(": ")[1] : "Not Assigned";
+      this._tm.setBookmarkForUser(username!, {
+        url: url!,
+        bookmarkId: uniqueId,
+        title,
+        desc,
+        tags
+      });
+      glog.info(
+        `[Line - 396][File - bot-service.ts] Enter Editing Mode\nid: ${uniqueId}\ntitle: ${title}\ndesc: ${desc}\ntags: ${tagStr}`
+      );
+      this.sendEditButton(chatId, this._tm.getBookmarkForUser(username!));
+      return CheckReplyForEdit.StopProcessing;
+    } else if (bookmarkId !== null && this.isDeleteWords(msg.text!)) {
+      let uniqueId = bookmarkId.split(": ")[1];
+      DbHandler.getLinkdingTokenForUser(username!).then(userToken => {
+        if (userToken?.[0]?.token) {
+          ApiCaller.getInstance()
+            .deleteBookmark(
+              process.env.NODE_ENV !== "production"
+                ? process.env.LINKDING_ADMIN_TOKEN
+                : userToken[0].token,
+              uniqueId
+            )
+            .then(() => {
+              this.sendMsg(chatId, LF.str.successfullyDeleted);
+            })
+            .catch(e => this.sendMsg(chatId, `😱 ${e}`));
+        }
+      });
+      return CheckReplyForEdit.StopProcessing;
+    } else if (
+      bookmarkId !== null &&
+      !this.isEditWords(msg.text!) &&
+      !this.isDeleteWords(msg.text!)
+    ) {
+      this.sendMsg(chatId!, LF.str.notACmd);
+      return CheckReplyForEdit.StopProcessing;
+    }
+    return CheckReplyForEdit.KeepProcessing;
+  }
+
+  handleAddBookmark(msg: TelegramBot.Message) {
+    const chatId = msg.chat.id;
+    const username = msg.from?.username;
+    let valid = /^(http|https):\/\/[^ "]+$/.test(msg.text!);
+
+    if (valid === true) {
+      this.sendMsg(
+        chatId,
+        "💌 태그를 space로 구분하여 입력해주세요\n\n-- 예시 --\n한국 텔레그램 멋짐"
+      );
+      this._inputUrl = msg.text!;
+      this._tm.setMode(username!, TypeMode.TagInput);
+    } else {
+      this.sendLinks(chatId, username!, msg.text ?? "unknown").catch(e =>
+        glog.error(`[Line - 290][File - bot-service.ts] ${e}`)
+      );
+    }
+  }
+
+  async handleTagInputMode(msg: TelegramBot.Message) {
+    const chatId = msg.chat.id;
+    const username = msg.from?.username;
+
+    try {
+      let userToken = await DbHandler.getLinkdingTokenForUser(username!);
+      if (userToken?.[0]?.token) {
+        let tags = msg.text?.split(" ") ?? [];
+        await ApiCaller.getInstance().createBookmark(
+          process.env.NODE_ENV !== "production"
+            ? process.env.LINKDING_ADMIN_TOKEN
+            : userToken[0].token,
+          this._inputUrl!,
+          tags
+        );
+        this.sendMsg(chatId, LF.str.successfullyAdded);
+      } else {
+        this.sendMsg(chatId, "😒 토큰이 없어요!");
+      }
+      this._tm.setMode(username!, TypeMode.Normal);
+    } catch (error) {
+      glog.error(`[Line - 464][File - bot-service.ts] ${error}`);
+      this.sendMsg(chatId, `${error}`);
+    }
+  }
+
+  handleEditingMode(msg: TelegramBot.Message) {
+    const chatId = msg.chat.id;
+    const username = msg.from?.username;
+
+    let bookmark = this._tm.getBookmarkForUser(username!);
+    if (this._tm.getMode(username!) === TypeMode.TitleEditing) {
+      bookmark.title = msg.text ?? "";
+    } else if (this._tm.getMode(username!) === TypeMode.DescEditing) {
+      bookmark.desc = msg.text ?? "";
+    } else if (this._tm.getMode(username!) === TypeMode.TagEditing) {
+      let tags = msg.text?.split(" ") ?? [];
+      bookmark.tags = tags ?? [];
+    } else {
+      return;
+    }
+    this.sendEditButton(chatId, bookmark);
   }
 
   private _messageHandler = (msg: TelegramBot.Message): void => {
@@ -304,49 +571,17 @@ export default class BotService {
     } else {
       this.authUserCommand(chatId, username, async () => {
         if (this._tm.getMode(username!) === TypeMode.Normal) {
-          let valid = /^(http|https):\/\/[^ "]+$/.test(msg.text!);
-          if (valid === true) {
-            this.sendMsg(
-              chatId,
-              "💌 태그를 space로 구분하여 입력해주세요\n\n-- 예시 --\n한국 텔레그램 멋짐"
-            );
-            this._inputUrl = msg.text!;
-            this._tm.setMode(username!, TypeMode.TagInput);
-          } else {
-            this.sendLinks(chatId, username!, msg.text ?? "unknown").catch(e =>
-              glog.error(`[Line - 290][File - bot-service.ts] ${e}`)
-            );
+          if (
+            this.checkReplyAndParseCommand(msg) ===
+            CheckReplyForEdit.StopProcessing
+          ) {
+            return;
           }
+          this.handleAddBookmark(msg);
         } else if (this._tm.getMode(username!) === TypeMode.TagInput) {
-          // 북마크 생성 : URL 형식
-          //   {
-          //     "url": "https://github.com/yellowgg2/youngs-ytdl",
-          //     "tag_names": [
-          //       "tag1",
-          //       "tag2",
-          //       "github"
-          //     ]
-          //   }
-          let userToken = await DbHandler.getLinkdingTokenForUser(username!);
-          if (userToken?.[0]?.token) {
-            try {
-              let tags = msg.text?.split(" ") ?? [];
-              await ApiCaller.getInstance().createBookmark(
-                process.env.NODE_ENV !== "production"
-                  ? process.env.LINKDING_ADMIN_TOKEN
-                  : userToken[0].token,
-                this._inputUrl!,
-                tags
-              );
-              this.sendMsg(chatId, LF.str.successfullyAdded);
-            } catch (error) {
-              this.sendMsg(chatId, `${error}`);
-              glog.error(`[Line - 340][File - bot-service.ts] ${error}`);
-            }
-          } else {
-            this.sendMsg(chatId, "😒 토큰이 없어요!");
-          }
-          this._tm.setMode(username!, TypeMode.Normal);
+          this.handleTagInputMode(msg);
+        } else if (this.isEditingMode(this._tm.getMode(username!))) {
+          this.handleEditingMode(msg);
         }
       });
     }

@@ -3,6 +3,7 @@ import { glog } from "../logger/custom-logger";
 import BotService from "../telegram/bot-service";
 import AxiosModel from "../../models/axios-model";
 import { LF } from "../../language/language-factory";
+import { IBookmarkInfo } from "../../models/telegram-model";
 require("dotenv").config();
 
 export interface IPlayList {
@@ -69,6 +70,46 @@ export default class ApiCaller {
 
     if (res.status >= 400) {
       glog.error(`[Line - 74][File - api-caller.ts] ${res.statusText}`);
+      throw res.statusText;
+    }
+  }
+
+  async updateBookmark(token: string, info: IBookmarkInfo) {
+    let payload = {
+      url: info.url,
+      title: info.title ?? "Not Assigned",
+      description: info.desc ?? "Not Assigned",
+      tag_names: info.tags ?? ["Not Assigned"]
+    };
+
+    console.table(payload);
+
+    let res = await axios.put(
+      `${this._baseUrl}/api/bookmarks/${info.bookmarkId}`,
+      payload,
+      {
+        headers: {
+          Authorization: `Token ${token}`
+        }
+      }
+    );
+
+    if (res.status >= 400) {
+      glog.error(`[Line - 94][File - api-caller.ts] ${res.statusText}`);
+      throw res.statusText;
+    }
+  }
+
+  async deleteBookmark(token: string, id: string) {
+    console.log(`${this._baseUrl}/api/bookmarks/${id}`);
+    let res = await axios.delete(`${this._baseUrl}/api/bookmarks/${id}`, {
+      headers: {
+        Authorization: `Token ${token}`
+      }
+    });
+
+    if (res.status >= 400) {
+      glog.error(`[Line - 107][File - api-caller.ts] ${res.statusText}`);
       throw res.statusText;
     }
   }
