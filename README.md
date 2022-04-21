@@ -23,8 +23,9 @@
 | `ADMIN_DESC`           | 관리자 설명                                                  | 수퍼맨                                  |
 | `ADMIN_CHATID`         | 특정 명령이나 에러 발생 시 메세지를 보낼 chat id             | 11223344                                |
 | `LINKDING_URL`         | Linkding의 설치 주소 (url or IP)                             | http://192.168.1.2:9090                 |
+| `MINIFLUX_URL`         | Miniflux 설치 주소 (url or IP)                               | http://192.168.1.2:8090                 |
 | `LINKDING_ADMIN_TOKEN` | Linkding admin계정의 토큰                                    | Linkding의 settings에서 확인 할 수 있음 |
-| `MINIFLUX_TOKEN`       | miniflux admin계정의 토큰                                    | miniflux의 settings에서 확인 할 수 있음 |
+| `MINIFLUX_TOKEN`       | Miniflux admin계정의 토큰                                    | miniflux의 settings에서 확인 할 수 있음 |
 | `BOT_LANG`             | 언어 설정 (ko: 한국어, en: 영어)                             | ko or en                                |
 
 ## 사용법
