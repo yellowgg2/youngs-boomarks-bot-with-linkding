@@ -44,6 +44,7 @@ export default class KoreanBot implements ILanguageBot {
 
   public get showHelp(): string {
     let helpMsg = "/help - 이 도움말 보기\n";
+    helpMsg += "/feed - miniflux 하나씩 보기";
     helpMsg += "/allusers - 모든 사용자 보기\n\n";
     helpMsg += "검색 기능\n";
     helpMsg += "<u>단어</u>로 검색할 때는 space로 구분하여 보냅니다\n";
