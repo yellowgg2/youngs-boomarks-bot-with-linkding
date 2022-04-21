@@ -178,15 +178,16 @@ export default class BotService {
     chatId: number,
     id: string | undefined,
     name: string | undefined,
+    type: string = "user",
     token: string = "",
-    type: string = "user"
+    minifluxToken: string = ""
   ) {
     if (!id || !name) {
       this.sendMsg(chatId, LF.str.howToAddUser);
       return;
     }
     this.sendMsgToAdmin(LF.str.newlyAddUserAdminCmd(id, name));
-    DbHandler.insertNewUser(id, name, token, type)
+    DbHandler.insertNewUser(id, name, token, minifluxToken, type)
       .then(() => this.sendMsg(chatId, LF.str.successfullyAdded))
       .catch(e => glog.error(e));
   }
@@ -195,15 +196,16 @@ export default class BotService {
     chatId: number,
     id: string | undefined,
     name: string | undefined,
+    type: string = "user",
     token: string = "",
-    type: string = "user"
+    minifluxToken: string = ""
   ) {
     if (!id || !name) {
       this.sendMsg(chatId, LF.str.howToUpUser);
       return;
     }
     this.sendMsgToAdmin(LF.str.updateUserAdminCmd(id, name));
-    DbHandler.updateUser(id, name, token, type)
+    DbHandler.updateUser(id, name, token, minifluxToken, type)
       .then(() => this.sendMsg(chatId, LF.str.successfullyUpdated))
       .catch(e => glog.error(e));
   }
@@ -561,12 +563,12 @@ export default class BotService {
           break;
         case /\/adduser/.test(cmd[0]):
           this.adminCommand(chatId, username, () => {
-            this.addUser(chatId, cmd[1], cmd[2], cmd[3], cmd[4]);
+            this.addUser(chatId, cmd[1], cmd[2], cmd[3], cmd[4], cmd[5]);
           });
           break;
         case /\/upuser/.test(cmd[0]):
           this.adminCommand(chatId, username, () => {
-            this.upUser(chatId, cmd[1], cmd[2], cmd[3], cmd[4]);
+            this.upUser(chatId, cmd[1], cmd[2], cmd[3], cmd[4], cmd[5]);
           });
           break;
         case /\/deluser/.test(cmd[0]):

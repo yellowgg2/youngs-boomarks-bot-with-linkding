@@ -1,9 +1,11 @@
 import { ILanguageBot } from "./language-factory";
 
 export default class KoreanBot implements ILanguageBot {
-  howToAddUser = "🌈 사용법 : /adduser [id] [설명] [token] [admin/user]";
+  howToAddUser =
+    "🌈 사용법 : /adduser id 설명 [admin/user] [linkding token] [miniflux token]";
   successfullyAdded = "🌈 성공적으로 [[ 추가 ]] 되었습니다";
-  howToUpUser = "🌈 사용법 : /upuser [id] [설명] [token] [admin/user]";
+  howToUpUser =
+    "🌈 사용법 : /upuser id 설명 [admin/user] [linkding token] [miniflux token]";
   successfullyUpdated = "🌈 성공적으로 [[ 변경 ]] 되었습니다";
   howToDelUser = "🌈 사용법 : /deluser [id]";
   successfullyDeleted = "🌈 성공적으로 [[ 삭제 ]] 되었습니다";
