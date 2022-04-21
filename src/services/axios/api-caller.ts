@@ -1,8 +1,5 @@
 import axios from "axios";
 import { glog } from "../logger/custom-logger";
-import BotService from "../telegram/bot-service";
-import AxiosModel from "../../models/axios-model";
-import { LF } from "../../language/language-factory";
 import { IBookmarkInfo } from "../../models/telegram-model";
 require("dotenv").config();
 
@@ -19,6 +16,7 @@ export interface IPlayListItem {
 export default class ApiCaller {
   private static instance: ApiCaller;
   private _baseUrl = process.env.LINKDING_URL;
+  private _miniBaseUrl = process.env.MINIFLUX_URL;
 
   private constructor() {}
 
@@ -101,7 +99,6 @@ export default class ApiCaller {
   }
 
   async deleteBookmark(token: string, id: string) {
-    console.log(`${this._baseUrl}/api/bookmarks/${id}`);
     let res = await axios.delete(`${this._baseUrl}/api/bookmarks/${id}`, {
       headers: {
         Authorization: `Token ${token}`
@@ -110,6 +107,42 @@ export default class ApiCaller {
 
     if (res.status >= 400) {
       glog.error(`[Line - 107][File - api-caller.ts] ${res.statusText}`);
+      throw res.statusText;
+    }
+  }
+
+  // /v1/entries?status=unread&direction=desc
+  async getUnreadArticle(token: string) {
+    let res = await axios.get(`${this._miniBaseUrl}/v1/entries`, {
+      headers: {
+        "X-Auth-Token": token
+      },
+      params: { status: "unread", direction: "desc", limit: 1, offset: 0 }
+    });
+
+    if (res.status >= 400) {
+      glog.error(`[Line - 124][File - api-caller.ts] ${res.statusText}`);
+      throw res.statusText;
+    }
+    return res.data;
+  }
+
+  async markAsReadAnArticle(token: string, id: number) {
+    let res = await axios.put(
+      `${this._miniBaseUrl}/v1/entries`,
+      { entry_ids: [id], status: "read" },
+      {
+        headers: {
+          "X-Auth-Token": token,
+          "Content-Type": "application/json"
+        }
+      }
+    );
+
+    if (res.status >= 400) {
+      glog.error(
+        `[Line - 136][File - api-caller.ts] ${res.statusText} ${res.status}`
+      );
       throw res.statusText;
     }
   }

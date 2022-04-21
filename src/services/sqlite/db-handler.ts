@@ -13,12 +13,13 @@ export default class DbHandler {
     username: string,
     firstName: string,
     token: string,
+    minifluxToken: string = "",
     type: string = "user"
   ): Promise<void> {
     if (!(await DbHandler.isExistingUsername(username))) {
       await DbService.getInstance().writeQuery(
-        "INSERT INTO bookmark_users(username, first_name, type, token) VALUES (?, ?, ?, ?)",
-        [username, firstName, type, token]
+        "INSERT INTO bookmark_users(username, first_name, type, token, miniflux_token) VALUES (?, ?, ?, ?, ?)",
+        [username, firstName, type, token, minifluxToken]
       );
     }
   }
@@ -27,11 +28,12 @@ export default class DbHandler {
     username: string,
     firstName: string,
     token: string,
+    minfluxToken: string = "",
     type: string = "user"
   ): Promise<void> {
     if (await DbHandler.isExistingUsername(username)) {
       await DbService.getInstance().writeQuery(
-        `UPDATE bookmark_users SET first_name='${firstName}',type='${type}', token='${token}' WHERE username='${username}'`
+        `UPDATE bookmark_users SET first_name='${firstName}',type='${type}', token='${token}', 'miniflux_token='${minfluxToken}' WHERE username='${username}'`
       );
     } else {
       throw "Nothing to update";
@@ -41,6 +43,14 @@ export default class DbHandler {
   static async getLinkdingTokenForUser(username: string): Promise<any> {
     let result = await DbService.getInstance().selectQuery(
       `SELECT token FROM bookmark_users WHERE username = '${username}' LIMIT 1;`
+    );
+
+    return result;
+  }
+
+  static async getMinifluxTokenForUser(username: string): Promise<any> {
+    let result = await DbService.getInstance().selectQuery(
+      `SELECT miniflux_token FROM bookmark_users WHERE username = '${username}' LIMIT 1;`
     );
 
     return result;
@@ -86,6 +96,7 @@ export default class DbHandler {
       process.env.ADMIN_USERNAME ?? "admin",
       process.env.ADMIN_DESC ?? "admin",
       process.env.LINKDING_ADMIN_TOKEN ?? "",
+      process.env.MINIFLUX_TOKEN ?? "",
       "admin"
     );
   }

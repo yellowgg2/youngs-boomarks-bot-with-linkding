@@ -514,7 +514,7 @@ export default class BotService {
       this._tm.setMode(username!, TypeMode.Normal);
     } catch (error) {
       glog.error(`[Line - 464][File - bot-service.ts] ${error}`);
-      this.sendMsg(chatId, `${error}`);
+      this.sendMsg(chatId, `😱 ${error}`);
     }
   }
 
@@ -572,6 +572,37 @@ export default class BotService {
         case /\/deluser/.test(cmd[0]):
           this.adminCommand(chatId, username, () => {
             this.delUser(chatId, cmd[1]);
+          });
+          break;
+        case /\/feed/.test(cmd[0]):
+          this.authUserCommand(chatId, username, async () => {
+            let userToken = await DbHandler.getMinifluxTokenForUser(username!);
+            if (userToken?.[0]?.miniflux_token) {
+              console.log(userToken[0]?.miniflux_token);
+              ApiCaller.getInstance()
+                .getUnreadArticle(userToken[0]?.miniflux_token)
+                .then(async entries => {
+                  if (entries.entries.length > 0) {
+                    const { id, title, url, published_at } = entries.entries[0];
+                    let pubDate = new Date(published_at);
+                    let sendBackMessage = "";
+                    sendBackMessage += `🎫 ID: ${id}\n`;
+                    sendBackMessage += `💌 Title: ${title}\n`;
+                    sendBackMessage += `🕑 Publish at: ${pubDate.toLocaleDateString()} ${pubDate.toLocaleTimeString()}\n\n`;
+                    sendBackMessage += url;
+
+                    this.sendMsg(chatId, sendBackMessage);
+                    await ApiCaller.getInstance().markAsReadAnArticle(
+                      userToken[0]?.miniflux_token,
+                      id
+                    );
+                  }
+                })
+                .catch(e => {
+                  //   console.log(e);
+                  this.sendMsg(chatId, `😱 ${e}`);
+                });
+            }
           });
           break;
         default:

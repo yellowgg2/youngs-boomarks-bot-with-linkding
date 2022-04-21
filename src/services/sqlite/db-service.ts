@@ -24,7 +24,8 @@ export default class DbService {
       username TEXT PRIMARY KEY,
       first_name TEXT,
       type TEXT,
-      token TEXT
+      token TEXT,
+      miniflux_token TEXT
       )
   `;
 
