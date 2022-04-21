@@ -24,6 +24,7 @@
 | `ADMIN_CHATID`         | 특정 명령이나 에러 발생 시 메세지를 보낼 chat id             | 11223344                                |
 | `LINKDING_URL`         | Linkding의 설치 주소 (url or IP)                             | http://192.168.1.2:9090                 |
 | `LINKDING_ADMIN_TOKEN` | Linkding admin계정의 토큰                                    | Linkding의 settings에서 확인 할 수 있음 |
+| `MINIFLUX_TOKEN`       | miniflux admin계정의 토큰                                    | miniflux의 settings에서 확인 할 수 있음 |
 | `BOT_LANG`             | 언어 설정 (ko: 한국어, en: 영어)                             | ko or en                                |
 
 ## 사용법
@@ -41,3 +42,4 @@
   - 북마크를 검색 후 해당 메세지를 `reply`를 하여 다음 중 하나의 단어를 입력한다. (`e, edit, 수정`)
 - 북마크 삭제
   - 북마크를 검색 후 해당 메세지를 `reply`를 하여 다음 중 하나의 단어를 입력한다. (`d, delete, 삭제`)
+- miniflux 연동
