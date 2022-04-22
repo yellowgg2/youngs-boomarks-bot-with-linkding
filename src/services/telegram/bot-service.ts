@@ -604,10 +604,10 @@ export default class BotService {
                     sendBackMessage += url;
 
                     this.sendMsg(chatId, sendBackMessage);
-                    // await ApiCaller.getInstance().markAsReadAnArticle(
-                    //   userToken[0]?.miniflux_token,
-                    //   id
-                    // );
+                    await ApiCaller.getInstance().markAsReadAnArticle(
+                      userToken[0]?.miniflux_token,
+                      id
+                    );
                   }
                 })
                 .catch(e => {
