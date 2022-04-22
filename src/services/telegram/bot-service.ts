@@ -598,9 +598,9 @@ export default class BotService {
                     sendBackMessage += `🆕 Unread : ${total}\n`;
                     sendBackMessage += `🎫 ID: ${id}\n`;
                     sendBackMessage += `👩‍🌾 Author: ${author}\n`;
-                    sendBackMessage += `👩‍🌾 Reading Time: <u>${reading_time} min</u>\n`;
+                    sendBackMessage += `🕑 Reading Time: <u>${reading_time} min</u>\n`;
                     sendBackMessage += `💌 Title: ${title}\n`;
-                    sendBackMessage += `🕑 Publish at: ${pubDate.toLocaleDateString()} ${pubDate.toLocaleTimeString()}\n\n`;
+                    sendBackMessage += `📆 Publish at: ${pubDate.toLocaleDateString()} ${pubDate.toLocaleTimeString()}\n\n`;
                     sendBackMessage += url;
 
                     this.sendMsg(chatId, sendBackMessage);
