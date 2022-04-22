@@ -580,24 +580,34 @@ export default class BotService {
           this.authUserCommand(chatId, username, async () => {
             let userToken = await DbHandler.getMinifluxTokenForUser(username!);
             if (userToken?.[0]?.miniflux_token) {
-              console.log(userToken[0]?.miniflux_token);
               ApiCaller.getInstance()
                 .getUnreadArticle(userToken[0]?.miniflux_token)
                 .then(async entries => {
                   if (entries.entries.length > 0) {
-                    const { id, title, url, published_at } = entries.entries[0];
+                    const { total, entries: articles } = entries;
+                    const {
+                      id,
+                      title,
+                      url,
+                      published_at,
+                      author,
+                      reading_time
+                    } = articles[0];
                     let pubDate = new Date(published_at);
                     let sendBackMessage = "";
+                    sendBackMessage += `🆕 Unread : ${total}\n`;
                     sendBackMessage += `🎫 ID: ${id}\n`;
+                    sendBackMessage += `👩‍🌾 Author: ${author}\n`;
+                    sendBackMessage += `👩‍🌾 Reading Time: <u>${reading_time} min</u>\n`;
                     sendBackMessage += `💌 Title: ${title}\n`;
                     sendBackMessage += `🕑 Publish at: ${pubDate.toLocaleDateString()} ${pubDate.toLocaleTimeString()}\n\n`;
                     sendBackMessage += url;
 
                     this.sendMsg(chatId, sendBackMessage);
-                    await ApiCaller.getInstance().markAsReadAnArticle(
-                      userToken[0]?.miniflux_token,
-                      id
-                    );
+                    // await ApiCaller.getInstance().markAsReadAnArticle(
+                    //   userToken[0]?.miniflux_token,
+                    //   id
+                    // );
                   }
                 })
                 .catch(e => {
