@@ -378,12 +378,21 @@ export default class BotService {
           bookmark.tag_names.length > 0
             ? (bookmark.tag_names as []).map(v => `#${v}`).join(" ")
             : "없음";
+
+        let shortenDesc = desc;
+
+        let MAX_LEN = 100;
+        if (desc.length > MAX_LEN) {
+          shortenDesc = desc.slice(0, MAX_LEN);
+          shortenDesc += "...";
+        }
         sendBackMessage += `🎫 ID: ${bookmark.id}\n`;
         sendBackMessage += `🛒 Title: ${title}\n`;
-        sendBackMessage += `🔰 Desc: ${desc}\n`;
+        sendBackMessage += `🔰 Desc: ${shortenDesc}\n`;
         sendBackMessage += `🍒 Tags: <code>${tags}</code>\n`;
 
         sendBackMessage += `${bookmark.url}`;
+
         messagesPromise.push(this.sendMsg(chatId, sendBackMessage));
       }
       Promise.all(messagesPromise).then(() => {
