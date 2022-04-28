@@ -1,3 +1,7 @@
+import fs from "fs";
+import pdf from "html-pdf";
+import { botInstance } from "../global-bot-config";
+
 export enum TypeMode {
   Normal = 1,
   TagInput,
@@ -27,6 +31,18 @@ export default class TelegramModel {
 
   getMode(username: string) {
     return this.users[username] ?? TypeMode.Normal;
+  }
+
+  htmlToPdf(html: string): Promise<Buffer> {
+    // pdf.create(html).toStream(function (err, stream) {
+    //   stream.pipe(fs.createWriteStream("./foo.pdf"));
+    // });
+
+    return new Promise((resolve, _) => {
+      pdf.create(html).toBuffer((err, buffer) => {
+        resolve(buffer);
+      });
+    });
   }
 
   setBookmarkForUser(username: string, bookmark: IBookmarkInfo) {

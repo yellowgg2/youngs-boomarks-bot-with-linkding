@@ -589,6 +589,7 @@ export default class BotService {
           this.authUserCommand(chatId, username, async () => {
             let userToken = await DbHandler.getMinifluxTokenForUser(username!);
             if (userToken?.[0]?.miniflux_token) {
+              await this.sendMsg(chatId, "🎈 처리 중입니다...");
               ApiCaller.getInstance()
                 .getUnreadArticle(userToken[0]?.miniflux_token)
                 .then(async entries => {
@@ -600,7 +601,8 @@ export default class BotService {
                       url,
                       published_at,
                       author,
-                      reading_time
+                      reading_time,
+                      content
                     } = articles[0];
                     let pubDate = new Date(published_at);
                     let sendBackMessage = "";
@@ -612,11 +614,19 @@ export default class BotService {
                     sendBackMessage += `📆 Publish at: ${pubDate.toLocaleDateString()} ${pubDate.toLocaleTimeString()}\n\n`;
                     sendBackMessage += url;
 
+                    this._tm.htmlToPdf(content).then(buffer => {
+                      botInstance.sendDocument(
+                        chatId,
+                        buffer,
+                        {},
+                        { filename: `${title}` }
+                      );
+                    });
                     this.sendMsg(chatId, sendBackMessage);
-                    await ApiCaller.getInstance().markAsReadAnArticle(
-                      userToken[0]?.miniflux_token,
-                      id
-                    );
+                    // await ApiCaller.getInstance().markAsReadAnArticle(
+                    //   userToken[0]?.miniflux_token,
+                    //   id
+                    // );
                   }
                 })
                 .catch(e => {
