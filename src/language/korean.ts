@@ -54,6 +54,13 @@ export default class KoreanBot implements ILanguageBot {
     helpMsg += "<u>태그</u>로 검색할 때는 단어 앞에 '#'을 붙이고\n";
     helpMsg += "space로 구분하여 보냅니다\n";
     helpMsg += "예시) #단어1 #단어2\n\n";
+    helpMsg += "부가기능\n";
+    helpMsg +=
+      "1. 검색 후, 원하는 링크를 reply로 다음 중 하나의 단어를 입력하면 정보 <u>수정</u>이 가능하다\n";
+    helpMsg += "예시) e, edit, 수정\n";
+    helpMsg +=
+      "2. 검색 후, 원하는 링크를 reply로 다음 중 하나의 단어를 입력하면 정보 <u>삭제</u> 가능하다\n";
+    helpMsg += "예시) d, delete, 삭제\n";
 
     return helpMsg;
   }
