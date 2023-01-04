@@ -614,14 +614,14 @@ export default class BotService {
                     sendBackMessage += `📆 Publish at: ${pubDate.toLocaleDateString()} ${pubDate.toLocaleTimeString()}\n\n`;
                     sendBackMessage += url;
 
-                    this._tm.htmlToPdf(content).then(buffer => {
-                      botInstance.sendDocument(
-                        chatId,
-                        buffer,
-                        {},
-                        { filename: `${title}` }
-                      );
-                    });
+                    // this._tm.htmlToPdf(content).then(buffer => {
+                    //   botInstance.sendDocument(
+                    //     chatId,
+                    //     buffer,
+                    //     {},
+                    //     { filename: `${title}` }
+                    //   );
+                    // });
                     this.sendMsg(chatId, sendBackMessage);
                     await ApiCaller.getInstance().markAsReadAnArticle(
                       userToken[0]?.miniflux_token,
