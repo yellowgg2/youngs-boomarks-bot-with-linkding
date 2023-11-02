@@ -143,7 +143,7 @@ export default class BotService {
     }
   }
 
-  sendMsg(
+  async sendMsg(
     chatId: number,
     msg: string,
     options: SendMessageOptions = { parse_mode: "HTML" }
@@ -622,7 +622,9 @@ export default class BotService {
                     //     { filename: `${title}` }
                     //   );
                     // });
-                    this.sendMsg(chatId, sendBackMessage);
+                    this.sendMsg(chatId, sendBackMessage).then(() => {
+                      this.sendMsg(chatId, `/feed 👈 눌러 다음 feed 보기`);
+                    });
                     await ApiCaller.getInstance().markAsReadAnArticle(
                       userToken[0]?.miniflux_token,
                       id
